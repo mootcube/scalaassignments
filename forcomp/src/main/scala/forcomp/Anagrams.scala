@@ -34,14 +34,14 @@ object Anagrams {
    *  same character, and are represented as a lowercase character in the occurrence list.
    */
   def wordOccurrences(w: Word): Occurrences = 
-  {
-	val m = w.toLowerCase map (c => (c,1)) groupBy (_._1)
-	(m map (e => (e._1,e._2.length)) toList) sortWith (_._1 < _._1)
-  }
+    {
+      val m = w.toLowerCase map (c => (c,1)) groupBy (_._1)
+      (m map (e => (e._1,e._2.length)) toList) sortWith (_._1 < _._1)
+    }
   
   /** Converts a sentence into its character occurrence list. */
   def sentenceOccurrences(s: Sentence): Occurrences = 
-	wordOccurrences(s mkString)
+    wordOccurrences(s mkString)
 
   /** The `dictionaryByOccurrences` is a `Map` from different occurrences to a sequence of all
    *  the words that have that occurrence count.
@@ -59,13 +59,13 @@ object Anagrams {
    *
    */
   lazy val dictionaryByOccurrences: Map[Occurrences, List[Word]] = {
-	loadDictionary groupBy (wordOccurrences(_))
-	}
+    loadDictionary groupBy (wordOccurrences(_))
+  }
 
   /** Returns all the anagrams of a given word. */
   def wordAnagrams(word: Word): List[Word] = dictionaryByOccurrences.get(wordOccurrences(word)) match {
-	case Some(e) => e
-	case None => List()
+    case Some(e) => e
+    case None => List()
   }
 
   /** Returns the list of all subsets of the occurrence list.
@@ -91,21 +91,21 @@ object Anagrams {
    *  in the example above could have been displayed in some other order.
    */
   def combinations(occurrences: Occurrences): List[Occurrences] = 
-  {
-	def prefix(c:Char,occurrences:Occurrences):Occurrences =
-	  occurrences match {
-	    case Nil => List((c,1))
-		case (o::os) => if(c<o._1) (c,1)::occurrences else if(c==o._1) (o._1,o._2+1)::os else ???
-	  }
+    {
+      def prefix(c:Char,occurrences:Occurrences):Occurrences =
 	occurrences match {
-	  case Nil => List(List())
-	  case (o::os) => {
-	    val sub = if(o._2 > 1) combinations((o._1,o._2-1)::os) else combinations(os)
-		val prefixedsub = sub map (i => prefix(o._1,i))
-		sub:::prefixedsub
-	  }
+	  case Nil => List((c,1))
+	  case (o::os) => if(c<o._1) (c,1)::occurrences else if(c==o._1) (o._1,o._2+1)::os else ???
 	}
-  }
+      occurrences match {
+	case Nil => List(List())
+	case (o::os) => {
+	  val sub = if(o._2 > 1) combinations((o._1,o._2-1)::os) else combinations(os)
+	  val prefixedsub = sub map (i => prefix(o._1,i))
+	  sub:::prefixedsub
+	}
+      }
+    }
 
   /** Subtracts occurrence list `y` from occurrence list `x`.
    * 
@@ -118,20 +118,26 @@ object Anagrams {
    *  and has no zero-entries.
    */
   def subtract(x: Occurrences, y: Occurrences): Occurrences = 
-    // def _subtract(x: Occurrences, y: Occurrences): Occurrences =
-	  (x,y) match
-	  {
-		case (Nil,_) => Nil
-		case (_,Nil) => x
-		case (ex::xs,ey::ys) if(ex._1 == ey._1) => 
-													if(ex._2 > ey._2)
-														(ex._1,ex._2 - ey._2)::subtract(xs,ys)
-													else
-														subtract(xs,ys)
-		case (ex::xs,ey::ys) if(ex._1 > ey._1) => subtract(x,ys)
-		case (ex::xs,ey::ys) if(ex._1 < ey._1) => ex::subtract(xs,y)
-		case _ => ???
-	  }
+    {
+      def _subtract(ex: (Char, Int), xs:Occurrences,ey: (Char, Int), ys:Occurrences): Occurrences =
+	if(ex._1 == ey._1)
+	  if(ex._2 > ey._2)
+	    (ex._1,ex._2 - ey._2)::subtract(xs,ys)
+	  else
+	    subtract(xs,ys)
+	  else if(ex._1 > ey._1) subtract(x,ys)
+	  else ex::subtract(xs,y)
+
+      // def _subtract(x: Occurrences, y: Occurrences): Occurrences =
+      (x,y) match
+      {
+	case (Nil,_) => Nil
+	case (_,Nil) => x
+	case (ex::xs,ey::ys) =>
+	  _subtract(ex,xs,ey,ys)
+	case _ => ???
+      }
+    }
 
   /** Returns a list of all anagram sentences of the given sentence.
    *  
@@ -166,42 +172,42 @@ object Anagrams {
    *    )
    *
    *  The different sentences do not have to be output in the order shown above - any order is fine as long as
-   *  all the anagrams are there. Every returned word has to exist in the dictionary.
-   *  
-   *  Note: in case that the words of the sentence are in the dictionary, then the sentence is the anagram of itself,
-   *  so it has to be returned in this list.
-   *
-   *  Note: There is only one anagram of an empty sentence.
-   */
+  *  all the anagrams are there. Every returned word has to exist in the dictionary.
+  *  
+  *  Note: in case that the words of the sentence are in the dictionary, then the sentence is the anagram of itself,
+  *  so it has to be returned in this list.
+  *
+  *  Note: There is only one anagram of an empty sentence.
+  */
   def sentenceAnagrams(sentence: Sentence): List[Sentence] = {
-	val occ = sentenceOccurrences(sentence)
-	def prefixAll(lw:List[Word],l:List[Sentence]):List[Sentence]=
-	  lw flatMap (w => l map (i => w::i))
-	def testAll(occ:Occurrences, comb: List[Occurrences]):List[Sentence]=
-	{
-		comb match {
-			case Nil => Nil
-			case c::cs => 
-				val suffix = ana(subtract(occ,c))
-				val pre = dictionaryByOccurrences(c)
-				//println(pre)
-				if(suffix == Nil)testAll(occ,cs)
-				else prefixAll(pre,suffix):::testAll(occ,cs)
-		}
+    val occ = sentenceOccurrences(sentence)
+    def prefixAll(lw:List[Word],l:List[Sentence]):List[Sentence]=
+      lw flatMap (w => l map (i => w::i))
+    def testAll(occ:Occurrences, comb: List[Occurrences]):List[Sentence]=
+      {
+	comb match {
+	  case Nil => Nil
+	  case c::cs => 
+	  val suffix = ana(subtract(occ,c))
+	  val pre = dictionaryByOccurrences(c)
+	  //println(pre)
+	  if(suffix == Nil)testAll(occ,cs)
+	  else prefixAll(pre,suffix):::testAll(occ,cs)
 	}
-	def ana(occ:Occurrences):List[Sentence]={
-		occ match {
-		  case Nil => List(List())
-		  case _ => 
-					val comb = combinations(occ).filter(i => dictionaryByOccurrences.get(i)!=None)
-					//println(comb.size)
-					comb match{
-						case Nil => Nil
-						case _ => testAll(occ,comb)
-					}
-		}
+      }
+    def ana(occ:Occurrences):List[Sentence]={
+      occ match {
+	case Nil => List(List())
+	case _ => 
+	val comb = combinations(occ).filter(i => dictionaryByOccurrences.get(i)!=None)
+	//println(comb.size)
+	comb match{
+	  case Nil => Nil
+	  case _ => testAll(occ,comb)
 	}
-	ana(occ)
+      }
+    }
+    ana(occ)
   }
   def print(l:List[Sentence]):String = 
     l map (i => "'"+(i mkString " ")+"'") mkString "\n"
