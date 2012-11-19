@@ -37,8 +37,9 @@ trait Solver extends GameDef {
    * make sure that we don't explore circular paths.
    */
   def newNeighborsOnly(neighbors: Stream[(Block, List[Move])],
-                       explored: Set[Block]): Stream[(Block, List[Move])] = 
+                       explored: Set[Block]): Stream[(Block, List[Move])] = {
     neighbors.filter((i:(Block,List[Move])) => ! explored.contains(i._1))
+  }
 
   /**
    * The function `from` returns the stream of all possible paths
@@ -69,8 +70,8 @@ trait Solver extends GameDef {
     else{
       val more =
         for{
-          step <- initial
-          next <- newNeighborsOnly(neighborsWithHistory(step._1,step._2),explored)
+          (b,moves) <- initial
+          next <- newNeighborsOnly(neighborsWithHistory(b,moves),explored)
         } yield next
       initial ++: from(more,explored ++ (more map (_._1)))
     }
@@ -95,5 +96,5 @@ trait Solver extends GameDef {
    * position.
    */
   lazy val solution: List[Move] = 
-    if(pathsToGoal.isEmpty) List() else pathsToGoal.head._2
+    if(pathsToGoal.isEmpty) List() else pathsToGoal.head._2.reverse
 }
